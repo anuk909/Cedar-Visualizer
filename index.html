@@ -16,20 +16,48 @@
       <div class="main-content">
         <div class="sidebar">
           <div class="upload-controls">
-            <button
-              class="upload-btn"
-              onclick="document.getElementById('schema-upload').click()"
-            >
-              📋 Upload Schema
+            <div class="drop-zone" id="schema-drop-zone">
+              <div class="drop-zone-content">
+                <div class="drop-zone-icon">📋</div>
+                <div class="drop-zone-text">Drop schema file here</div>
+                <div class="drop-zone-or">or</div>
+                <button
+                  class="upload-btn"
+                  onclick="document.getElementById('schema-upload').click()"
+                >
+                  Browse Schema
+                </button>
+              </div>
+            </div>
+            <div class="drop-zone" id="entities-drop-zone">
+              <div class="drop-zone-content">
+                <div class="drop-zone-icon">👥</div>
+                <div class="drop-zone-text">Drop entities file here</div>
+                <div class="drop-zone-or">or</div>
+                <button
+                  class="upload-btn"
+                  onclick="document.getElementById('entities-upload').click()"
+                >
+                  Browse Entities
+                </button>
+              </div>
+            </div>
+            <button class="collapsible-btn" onclick="toggleSampleData()">
+              <span class="arrow" id="sample-arrow">▶</span>
+              📦 Sample Data
             </button>
-            <button
-              class="upload-btn"
-              onclick="document.getElementById('entities-upload').click()"
-            >
-              👥 Upload Entities
-            </button>
-            <button class="upload-btn sample" onclick="loadSampleData()">
-              📦 Load Sample Data
+            <div class="collapsible-content" id="sample-content">
+              <select id="sample-select" class="sample-select">
+                <option value="Photo Sharing">Photo Sharing</option>
+                <option value="Healthcare">Healthcare</option>
+                <option value="Kubernetes">Kubernetes</option>
+              </select>
+              <button class="upload-btn sample" onclick="loadSampleData()">
+                Load Selected Sample
+              </button>
+            </div>
+            <button class="upload-btn" onclick="clearData()">
+              🗑️ Clear All
             </button>
           </div>
 
@@ -82,10 +110,10 @@
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                padding: 5px 10px;
+                padding: 3px 6px;
               "
             >
-              <span style="font-size: 0.85em; color: #495057"
+              <span style="font-size: 0.7em; color: #495057"
                 >Namespace Prefix</span
               >
               <label class="toggle-switch">

@@ -15,6 +15,9 @@ document
   .getElementById("entities-upload")
   .addEventListener("change", handleEntitiesUpload);
 
+// Drag and drop setup
+setupDragAndDrop();
+
 function handleSchemaUpload(event) {
   const file = event.target.files[0];
   if (file) {
@@ -42,6 +45,99 @@ function handleSchemaUpload(event) {
 } function handleEntitiesUpload(event) {
   const file = event.target.files[0];
   if (file) {
+    entitiesFileName = file.name;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        entitiesData = normalizeEntities(JSON.parse(e.target.result));
+        updateView();
+      } catch (error) {
+        alert("Error parsing entities JSON: " + error.message);
+      }
+    };
+    reader.readAsText(file);
+  }
+}
+
+// Drag and drop functionality
+function setupDragAndDrop() {
+  const schemaDropZone = document.getElementById('schema-drop-zone');
+  const entitiesDropZone = document.getElementById('entities-drop-zone');
+
+  // Schema drop zone
+  setupDropZone(schemaDropZone, (file) => {
+    handleFileUpload(file, 'schema');
+  });
+
+  // Entities drop zone
+  setupDropZone(entitiesDropZone, (file) => {
+    handleFileUpload(file, 'entities');
+  });
+}
+
+function setupDropZone(dropZone, callback) {
+  // Prevent default drag behaviors on drop zone
+  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, preventDefaults, false);
+  });
+
+  // Prevent default drag behaviors on body (to prevent browser from opening files)
+  ['dragenter', 'dragover'].forEach(eventName => {
+    document.body.addEventListener(eventName, preventDefaults, false);
+  });
+
+  // Highlight drop zone when item is dragged over it
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, () => {
+      dropZone.classList.add('drag-over');
+    }, false);
+  });
+
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, () => {
+      dropZone.classList.remove('drag-over');
+    }, false);
+  });
+
+  // Handle dropped files
+  dropZone.addEventListener('drop', (e) => {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+
+    if (files.length > 0) {
+      callback(files[0]);
+    }
+  }, false);
+}
+
+function preventDefaults(e) {
+  e.preventDefault();
+  e.stopPropagation();
+}
+
+function handleFileUpload(file, type) {
+  if (type === 'schema') {
+    schemaFileName = file.name;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target.result;
+      const isJsonFormat = file.name.endsWith('.json');
+
+      if (isJsonFormat) {
+        try {
+          parseJsonSchema(JSON.parse(content));
+        } catch (error) {
+          alert("Error parsing JSON schema: " + error.message);
+          return;
+        }
+      } else {
+        parseSchema(content);
+      }
+
+      updateView();
+    };
+    reader.readAsText(file);
+  } else if (type === 'entities') {
     entitiesFileName = file.name;
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -192,18 +288,70 @@ function parseJsonSchema(schemaJson) {
 
 async function loadSampleData() {
   try {
-    const schemaResponse = await fetch("inputs/schema.cedarschema");
-    parseSchema(await schemaResponse.text());
-    schemaFileName = "schema.cedarschema (sample)";
+    const selectedSample = document.getElementById("sample-select").value;
 
-    const entitiesResponse = await fetch("inputs/entities.json");
+    let schemaFile, entitiesFile;
+
+    switch (selectedSample) {
+      case "Healthcare":
+        schemaFile = "inputs/healthcare_schema.json";
+        entitiesFile = "inputs/healthcare_entities.json";
+        break;
+      case "Kubernetes":
+        schemaFile = "inputs/k8s_schema.json";
+        entitiesFile = "inputs/k8s_entities.json";
+        break;
+      case "Photo Sharing":
+      default:
+        schemaFile = "inputs/photo_sharing_schema.cedarschema";
+        entitiesFile = "inputs/photo_sharing_entities.json";
+        break;
+    }
+
+    const schemaResponse = await fetch(schemaFile);
+    const schemaContent = await schemaResponse.text();
+
+    // Determine if schema is JSON or Cedar format
+    if (schemaFile.endsWith('.json')) {
+      parseJsonSchema(JSON.parse(schemaContent));
+    } else {
+      parseSchema(schemaContent);
+    }
+    schemaFileName = schemaFile.split('/').pop() + " (sample)";
+
+    const entitiesResponse = await fetch(entitiesFile);
     entitiesData = normalizeEntities(await entitiesResponse.json());
-    entitiesFileName = "entities.json (sample)";
+    entitiesFileName = entitiesFile.split('/').pop() + " (sample)";
 
     updateView();
   } catch (error) {
     alert("Error loading sample data: " + error.message);
   }
+}
+
+function clearData() {
+  entitiesData = [];
+  schemaData = null;
+  schemaFileName = null;
+  entitiesFileName = null;
+  currentView = "overview";
+  selectedEntityType = null;
+  showNamespacePrefix = true;
+  hasNamespace = false;
+
+  // Reset file inputs
+  document.getElementById("schema-upload").value = "";
+  document.getElementById("entities-upload").value = "";
+
+  updateView();
+}
+
+function toggleSampleData() {
+  const content = document.getElementById('sample-content');
+  const arrow = document.getElementById('sample-arrow');
+  
+  content.classList.toggle('open');
+  arrow.classList.toggle('open');
 }
 
 function stripNamespace(fullName) {
