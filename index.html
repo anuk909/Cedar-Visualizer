@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cedar Entity & Schema Visualizer</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="title-bar">🔍 Cedar Entity & Schema Visualizer</div>
+
+      <input type="file" id="schema-upload" accept=".cedarschema,.json" />
+      <input type="file" id="entities-upload" accept=".json" />
+
+      <div class="main-content">
+        <div class="sidebar">
+          <div class="upload-controls">
+            <button
+              class="upload-btn"
+              onclick="document.getElementById('schema-upload').click()"
+            >
+              📋 Upload Schema
+            </button>
+            <button
+              class="upload-btn"
+              onclick="document.getElementById('entities-upload').click()"
+            >
+              👥 Upload Entities
+            </button>
+            <button class="upload-btn sample" onclick="loadSampleData()">
+              📦 Load Sample Data
+            </button>
+          </div>
+
+          <div class="view-selector">
+            <h3>View Mode</h3>
+            <button class="view-btn active" onclick="switchView('overview')">
+              📊 Overview
+            </button>
+            <button class="view-btn" onclick="switchView('by-type')">
+              🏷️ By Entity Type
+            </button>
+            <button class="view-btn" onclick="switchView('hierarchy')">
+              🌳 Hierarchy
+            </button>
+            <button class="view-btn" onclick="switchView('schema')">
+              📜 Schema
+            </button>
+          </div>
+
+          <div
+            class="view-selector"
+            id="namespace-toggle-section"
+            style="margin-top: 20px; display: none"
+          >
+            <h3>Display Options</h3>
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 10px;
+              "
+            >
+              <span style="font-size: 0.9em; color: #495057"
+                >Show App Prefix</span
+              >
+              <label class="toggle-switch">
+                <input
+                  type="checkbox"
+                  id="toggle-namespace-checkbox"
+                  onchange="toggleNamespacePrefix()"
+                />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="content-area" id="content-area">
+          <div class="empty-state">
+            <div class="empty-state-icon">📁</div>
+            <h2>No Data Loaded</h2>
+            <p>
+              Upload your Cedar schema and entities files, or load the sample
+              data to get started.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
