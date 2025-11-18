@@ -51,25 +51,48 @@
 
           <div
             class="view-selector"
+            id="loaded-files-section"
+            style="display: none"
+          >
+            <h3>Loaded Files</h3>
+            <div class="file-pane" id="schema-file-pane">
+              <div class="file-icon">📋</div>
+              <div class="file-info">
+                <div class="file-label">Schema</div>
+                <div class="file-name" id="schema-file-name">-</div>
+              </div>
+            </div>
+            <div class="file-pane" id="entities-file-pane">
+              <div class="file-icon">👥</div>
+              <div class="file-info">
+                <div class="file-label">Entities</div>
+                <div class="file-name" id="entities-file-name">-</div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="view-selector"
             id="namespace-toggle-section"
-            style="margin-top: 20px; display: none"
+            style="display: none"
           >
             <h3>Display Options</h3>
             <div
               style="
                 display: flex;
                 align-items: center;
-                gap: 10px;
-                padding: 10px;
+                justify-content: space-between;
+                padding: 5px 10px;
               "
             >
-              <span style="font-size: 0.9em; color: #495057"
-                >Show App Prefix</span
+              <span style="font-size: 0.85em; color: #495057"
+                >Namespace Prefix</span
               >
               <label class="toggle-switch">
                 <input
                   type="checkbox"
                   id="toggle-namespace-checkbox"
+                  checked
                   onchange="toggleNamespacePrefix()"
                 />
                 <span class="toggle-slider"></span>

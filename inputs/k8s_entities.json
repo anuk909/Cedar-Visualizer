@@ -1,0 +1,79 @@
+[
+  {
+    "uid": {
+      "type": "k8s::Resource",
+      "id": "/api/v1/namespaces/default/configmaps"
+    },
+    "parents": [],
+    "attrs": {
+      "apiGroup": "",
+      "resource": "configmaps",
+      "labelSelector": [
+        {
+          "key": "owner",
+          "operator": "=",
+          "values": ["engineer-erin"]
+        }
+      ]
+    }
+  },
+  {
+    "uid": {
+      "type": "k8s::Group",
+      "id": "system:authenticated"
+    },
+    "parents": [],
+    "attrs": {
+      "name": "system:authenticated"
+    }
+  },
+  {
+    "uid": {
+      "type": "k8s::Group",
+      "id": "self-configmaps-only"
+    },
+    "parents": [],
+    "attrs": {
+      "name": "self-configmaps-only"
+    }
+  },
+  {
+    "uid": {
+      "type": "k8s::Group",
+      "id": "developers"
+    },
+    "parents": [],
+    "attrs": {
+      "name": "developers"
+    }
+  },
+  {
+    "uid": {
+      "type": "k8s::User",
+      "id": "engineer-erin-d74cea23a74f"
+    },
+    "parents": [
+      {
+        "type": "k8s::Group",
+        "id": "developers"
+      },
+      {
+        "type": "k8s::Group",
+        "id": "self-configmaps-only"
+      },
+      {
+        "type": "k8s::Group",
+        "id": "system:authenticated"
+      }
+    ],
+    "attrs": {
+      "extra": [
+        {
+          "key": "user-uid",
+          "values": ["engineer-erin-d74cea23a74f"]
+        }
+      ],
+      "name": "engineer-erin"
+    }
+  }
+]

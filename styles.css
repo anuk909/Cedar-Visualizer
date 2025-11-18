@@ -97,27 +97,27 @@ body {
 .sidebar {
   background: #f8f9fa;
   border-right: 2px solid #e9ecef;
-  padding: 20px;
+  padding: 15px;
   overflow-y: auto;
 }
 
 .upload-controls {
-  margin-bottom: 20px;
-  padding-bottom: 20px;
+  margin-bottom: 15px;
+  padding-bottom: 15px;
   border-bottom: 2px solid #e9ecef;
 }
 
 .upload-btn {
   display: block;
   width: 100%;
-  padding: 10px;
-  margin-bottom: 8px;
+  padding: 8px;
+  margin-bottom: 6px;
   background: #667eea;
   color: white;
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  font-size: 0.9em;
+  font-size: 0.85em;
   font-weight: 600;
   transition: background 0.3s;
 }
@@ -139,26 +139,27 @@ input[type="file"] {
 }
 
 .view-selector {
-  margin-bottom: 30px;
+  margin-bottom: 15px;
 }
 
 .view-selector h3 {
-  margin-bottom: 15px;
+  margin-bottom: 10px;
   color: #333;
-  font-size: 1.2em;
+  font-size: 1em;
+  font-weight: 600;
 }
 
 .view-btn {
   display: block;
   width: 100%;
-  padding: 12px;
-  margin-bottom: 8px;
+  padding: 8px;
+  margin-bottom: 5px;
   background: white;
   border: 2px solid #e9ecef;
   border-radius: 5px;
   cursor: pointer;
   text-align: left;
-  font-size: 0.95em;
+  font-size: 0.85em;
   transition: all 0.3s;
   font-weight: 500;
 }
@@ -173,6 +174,53 @@ input[type="file"] {
   background: #667eea;
   color: white;
   border-color: #667eea;
+}
+
+.file-pane {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  margin-bottom: 5px;
+  background: white;
+  border: 2px solid #e9ecef;
+  border-radius: 5px;
+  font-size: 0.8em;
+}
+
+.file-icon {
+  font-size: 1.2em;
+  flex-shrink: 0;
+}
+
+.file-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-label {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.9em;
+  margin-bottom: 2px;
+}
+
+.file-name {
+  color: #6c757d;
+  font-size: 0.85em;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.3;
+}
+
+.file-pane.loaded {
+  border-color: #28a745;
+  background: #f8fff9;
+}
+
+.file-pane.loaded .file-name {
+  color: #28a745;
+  font-weight: 500;
 }
 
 .entity-type-list {
@@ -465,8 +513,8 @@ pre {
 .toggle-switch {
   position: relative;
   display: inline-block;
-  width: 50px;
-  height: 26px;
+  width: 44px;
+  height: 24px;
 }
 
 .toggle-switch input {
@@ -482,16 +530,16 @@ pre {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #667eea;
+  background-color: #ccc;
   transition: 0.3s;
-  border-radius: 26px;
+  border-radius: 24px;
 }
 
 .toggle-slider:before {
   position: absolute;
   content: "";
-  height: 20px;
-  width: 20px;
+  height: 18px;
+  width: 18px;
   left: 3px;
   bottom: 3px;
   background-color: white;
@@ -500,11 +548,11 @@ pre {
 }
 
 input:checked + .toggle-slider {
-  background-color: #ccc;
+  background-color: #667eea;
 }
 
 input:checked + .toggle-slider:before {
-  transform: translateX(24px);
+  transform: translateX(20px);
 }
 
 .toggle-slider:hover {

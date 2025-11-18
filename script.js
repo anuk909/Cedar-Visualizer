@@ -2,8 +2,10 @@ let entitiesData = [];
 let schemaData = null;
 let currentView = "overview";
 let selectedEntityType = null;
-let hideNamespacePrefix = false;
+let showNamespacePrefix = true;
 let hasNamespace = false;
+let schemaFileName = null;
+let entitiesFileName = null;
 
 // File upload handlers
 document
@@ -16,23 +18,20 @@ document
 function handleSchemaUpload(event) {
   const file = event.target.files[0];
   if (file) {
+    schemaFileName = file.name;
     const reader = new FileReader();
     reader.onload = (e) => {
       const content = e.target.result;
-
-      // Check file extension to determine format
       const isJsonFormat = file.name.endsWith('.json');
 
       if (isJsonFormat) {
         try {
-          const jsonSchema = JSON.parse(content);
-          parseJsonSchema(jsonSchema);
+          parseJsonSchema(JSON.parse(content));
         } catch (error) {
           alert("Error parsing JSON schema: " + error.message);
           return;
         }
       } else {
-        // Treat as Cedar schema format (.cedarschema)
         parseSchema(content);
       }
 
@@ -43,11 +42,11 @@ function handleSchemaUpload(event) {
 } function handleEntitiesUpload(event) {
   const file = event.target.files[0];
   if (file) {
+    entitiesFileName = file.name;
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const rawData = JSON.parse(e.target.result);
-        entitiesData = normalizeEntities(rawData);
+        entitiesData = normalizeEntities(JSON.parse(e.target.result));
         updateView();
       } catch (error) {
         alert("Error parsing entities JSON: " + error.message);
@@ -58,34 +57,28 @@ function handleSchemaUpload(event) {
 }
 
 function normalizeEntities(entities) {
-  // Normalize entities to handle both formats:
-  // Format 1: { "uid": { "type": "...", "id": "..." }, ... }
-  // Format 2: { "uid": { "__entity": { "type": "...", "id": "..." } }, ... }
   return entities.map(entity => {
-    const normalizedEntity = { ...entity };
+    const normalized = { ...entity };
 
-    // Normalize uid
+    // Normalize uid if it has __entity wrapper
     if (entity.uid && entity.uid.__entity) {
-      normalizedEntity.uid = {
+      normalized.uid = {
         type: entity.uid.__entity.type,
         id: entity.uid.__entity.id
       };
     }
 
-    // Normalize parents
-    if (entity.parents && Array.isArray(entity.parents)) {
-      normalizedEntity.parents = entity.parents.map(parent => {
-        if (parent.__entity) {
-          return {
-            type: parent.__entity.type,
-            id: parent.__entity.id
-          };
-        }
-        return parent;
-      });
+    // Normalize parents if they have __entity wrappers
+    if (Array.isArray(entity.parents)) {
+      normalized.parents = entity.parents.map(parent =>
+        parent.__entity ? {
+          type: parent.__entity.type,
+          id: parent.__entity.id
+        } : parent
+      );
     }
 
-    return normalizedEntity;
+    return normalized;
   });
 }
 
@@ -199,15 +192,13 @@ function parseJsonSchema(schemaJson) {
 
 async function loadSampleData() {
   try {
-    // Load schema (sample data uses .cedarschema format)
-    const schemaResponse = await fetch("schema.cedarschema");
-    const schemaText = await schemaResponse.text();
-    parseSchema(schemaText);
+    const schemaResponse = await fetch("inputs/schema.cedarschema");
+    parseSchema(await schemaResponse.text());
+    schemaFileName = "schema.cedarschema (sample)";
 
-    // Load entities
-    const entitiesResponse = await fetch("entities.json");
-    const rawEntities = await entitiesResponse.json();
-    entitiesData = normalizeEntities(rawEntities);
+    const entitiesResponse = await fetch("inputs/entities.json");
+    entitiesData = normalizeEntities(await entitiesResponse.json());
+    entitiesFileName = "entities.json (sample)";
 
     updateView();
   } catch (error) {
@@ -216,17 +207,10 @@ async function loadSampleData() {
 }
 
 function stripNamespace(fullName) {
-  if (!hideNamespacePrefix) return fullName;
+  if (showNamespacePrefix) return fullName;
 
-  // Remove namespace prefix (e.g., "HealthCareApp::User" -> "User")
-  // Also handles Action entities (e.g., "HealthCareApp::Action::\"create\"" -> "\"create\"")
   const parts = fullName.split('::');
   if (parts.length > 1) {
-    // If it's an action, return the last part (the action name)
-    if (parts.includes('Action')) {
-      return parts[parts.length - 1];
-    }
-    // Otherwise return the last part (entity type)
     return parts[parts.length - 1];
   }
   return fullName;
@@ -234,7 +218,7 @@ function stripNamespace(fullName) {
 
 function toggleNamespacePrefix() {
   const checkbox = document.getElementById('toggle-namespace-checkbox');
-  hideNamespacePrefix = !checkbox.checked;
+  showNamespacePrefix = checkbox.checked;
   updateView();
 }
 
@@ -257,13 +241,8 @@ function selectEntityType(type) {
 function jumpToEntityType(type) {
   selectedEntityType = type;
   currentView = "by-type";
-  document
-    .querySelectorAll(".view-btn")
-    .forEach((btn) => btn.classList.remove("active"));
   document.querySelectorAll(".view-btn").forEach((btn) => {
-    if (btn.textContent.includes("By Entity Type")) {
-      btn.classList.add("active");
-    }
+    btn.classList.toggle("active", btn.textContent.includes("By Entity Type"));
   });
   updateView();
 }
@@ -292,14 +271,26 @@ function updateView() {
     toggleSection.style.display = hasNamespace ? "block" : "none";
   }
 
+  // Show/hide and update loaded files section
+  const filesSection = document.getElementById("loaded-files-section");
+  if (filesSection) {
+    const hasData = entitiesData.length > 0 || schemaData;
+    filesSection.style.display = hasData ? "block" : "none";
+
+    if (hasData) {
+      updateFileDisplay("schema-file-name", "schema-file-pane", schemaFileName);
+      updateFileDisplay("entities-file-name", "entities-file-pane", entitiesFileName);
+    }
+  }
+
   if (entitiesData.length === 0 && !schemaData) {
     contentArea.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">📁</div>
-                    <h2>No Data Loaded</h2>
-                    <p>Upload your Cedar schema and entities files, or load the sample data to get started.</p>
-                </div>
-            `;
+      <div class="empty-state">
+        <div class="empty-state-icon">📁</div>
+        <h2>No Data Loaded</h2>
+        <p>Upload your Cedar schema and entities files, or load the sample data to get started.</p>
+      </div>
+    `;
     return;
   }
 
@@ -319,6 +310,16 @@ function updateView() {
   }
 }
 
+function updateFileDisplay(fileElId, paneElId, fileName) {
+  const fileEl = document.getElementById(fileElId);
+  const paneEl = document.getElementById(paneElId);
+
+  if (fileEl && paneEl) {
+    fileEl.textContent = fileName || "-";
+    paneEl.classList.toggle("loaded", !!fileName);
+  }
+}
+
 function renderOverview() {
   const types = {};
   entitiesData.forEach((entity) => {
@@ -327,52 +328,45 @@ function renderOverview() {
   });
 
   const statsHtml = Object.entries(types)
-    .map(
-      ([type, count]) => `
-                <div class="stat-card" onclick="jumpToEntityType('${type}')">
-                    <div class="stat-number">${count}</div>
-                    <div class="stat-label">${stripNamespace(type)}</div>
-                </div>
-            `
-    )
-    .join("");
+    .map(([type, count]) => `
+      <div class="stat-card" onclick="jumpToEntityType('${type}')">
+        <div class="stat-number">${count}</div>
+        <div class="stat-label">${stripNamespace(type)}</div>
+      </div>
+    `).join("");
 
   const totalEntities = entitiesData.length;
   const totalTypes = Object.keys(types).length;
 
   document.getElementById("content-area").innerHTML = `
-            <h2 style="margin-bottom: 20px;">📊 Overview</h2>
-            
-            <div class="stats-grid">
-                <div class="stat-card non-clickable">
-                    <div class="stat-number">${totalEntities}</div>
-                    <div class="stat-label">Total Entities</div>
-                </div>
-                <div class="stat-card non-clickable">
-                    <div class="stat-number">${totalTypes}</div>
-                    <div class="stat-label">Entity Types</div>
-                </div>
-                ${schemaData
-      ? `
-                    <div class="stat-card non-clickable">
-                        <div class="stat-number">${schemaData.actions.length}</div>
-                        <div class="stat-label">Actions</div>
-                    </div>
-                `
-      : ""
-    }
-            </div>
+    <h2 style="margin-bottom: 20px;">📊 Overview</h2>
+    
+    <div class="stats-grid">
+      <div class="stat-card non-clickable">
+        <div class="stat-number">${totalEntities}</div>
+        <div class="stat-label">Total Entities</div>
+      </div>
+      <div class="stat-card non-clickable">
+        <div class="stat-number">${totalTypes}</div>
+        <div class="stat-label">Entity Types</div>
+      </div>
+      ${schemaData ? `
+        <div class="stat-card non-clickable">
+          <div class="stat-number">${schemaData.actions.length}</div>
+          <div class="stat-label">Actions</div>
+        </div>
+      ` : ""}
+    </div>
 
-            <h3 style="margin: 30px 0 15px 0;">Entity Distribution (click to view)</h3>
-            <div class="stats-grid">
-                ${statsHtml}
-            </div>
-        `;
+    <h3 style="margin: 30px 0 15px 0;">Entity Distribution (click to view)</h3>
+    <div class="stats-grid">
+      ${statsHtml}
+    </div>
+  `;
 }
 
 function renderByType() {
   if (!selectedEntityType) {
-    // Show entity type selector
     const types = {};
     entitiesData.forEach((entity) => {
       const type = entity.uid.type;
@@ -381,43 +375,30 @@ function renderByType() {
 
     const typeButtonsHtml = Object.entries(types)
       .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(
-        ([type, count]) =>
-          `<button class="entity-type-btn" onclick="selectEntityType('${type}')">${stripNamespace(type)} (${count})</button>`
-      )
-      .join("");
+      .map(([type, count]) =>
+        `<button class="entity-type-btn" onclick="selectEntityType('${type}')">${stripNamespace(type)} (${count})</button>`
+      ).join("");
 
     document.getElementById("content-area").innerHTML = `
-                <h2 style="margin-bottom: 20px;">🏷️ Select Entity Type</h2>
-                <input
-                  type="text"
-                  class="search-box"
-                  id="type-search"
-                  placeholder="Search entity types..."
-                  onkeyup="filterTypes()"
-                />
-                <div class="entity-type-list" id="entity-types-list">
-                    ${typeButtonsHtml}
-                </div>
-            `;
+      <h2 style="margin-bottom: 20px;">🏷️ Select Entity Type</h2>
+      <input type="text" class="search-box" id="type-search" placeholder="Search entity types..." onkeyup="filterTypes()" />
+      <div class="entity-type-list">
+        ${typeButtonsHtml}
+      </div>
+    `;
     return;
   }
 
-  const entities = entitiesData.filter(
-    (e) => e.uid.type === selectedEntityType
-  );
-
-  const entitiesHtml = entities
-    .map((entity) => renderEntityCard(entity))
-    .join("");
+  const entities = entitiesData.filter((e) => e.uid.type === selectedEntityType);
+  const entitiesHtml = entities.map((entity) => renderEntityCard(entity)).join("");
 
   document.getElementById("content-area").innerHTML = `
-            <div style="display: flex; align-items: center; margin-bottom: 20px;">
-                <button onclick="backToTypeSelection()" style="background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; margin-right: 15px; font-weight: 600;">← Back</button>
-                <h2 style="margin: 0;">🏷️ ${stripNamespace(selectedEntityType)} (${entities.length})</h2>
-            </div>
-            ${entitiesHtml}
-        `;
+    <div style="display: flex; align-items: center; margin-bottom: 20px;">
+      <button onclick="backToTypeSelection()" style="background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; margin-right: 15px; font-weight: 600;">← Back</button>
+      <h2 style="margin: 0;">🏷️ ${stripNamespace(selectedEntityType)} (${entities.length})</h2>
+    </div>
+    ${entitiesHtml}
+  `;
 }
 
 function formatAttributeValue(value) {
@@ -446,67 +427,47 @@ function formatAttributeValue(value) {
 }
 
 function renderEntityCard(entity) {
-  const parentsHtml =
-    entity.parents && entity.parents.length > 0
-      ? `<div class="section">
-                <div class="section-title">👥 Parents</div>
-                ${entity.parents
-        .map(
-          (p) => `<div class="list-item">${stripNamespace(p.type)}::${p.id}</div>`
-        )
-        .join("")}
-               </div>`
-      : "";
+  const parentsHtml = entity.parents?.length > 0
+    ? `<div class="section">
+        <div class="section-title">👥 Parents</div>
+        ${entity.parents.map((p) => `<div class="list-item">${stripNamespace(p.type)}::${p.id}</div>`).join("")}
+      </div>`
+    : "";
 
-  const attrsHtml =
-    entity.attrs && Object.keys(entity.attrs).length > 0
-      ? `<div class="section">
-                <div class="section-title">⚙️ Attributes</div>
-                ${Object.entries(entity.attrs)
-        .map(
-          ([key, value]) =>
-            `<div class="attr-item">
-                        <span class="attr-key">${key}:</span>
-                        <span class="attr-value">${formatAttributeValue(value)}</span>
-                     </div>`
-        )
-        .join("")}
-               </div>`
-      : "";
+  const attrsHtml = entity.attrs && Object.keys(entity.attrs).length > 0
+    ? `<div class="section">
+        <div class="section-title">⚙️ Attributes</div>
+        ${Object.entries(entity.attrs).map(([key, value]) =>
+      `<div class="attr-item">
+            <span class="attr-key">${key}:</span>
+            <span class="attr-value">${formatAttributeValue(value)}</span>
+          </div>`
+    ).join("")}
+      </div>`
+    : "";
 
-  // Find children
-  const children = entitiesData.filter(
-    (e) =>
-      e.parents &&
-      e.parents.some(
-        (p) => p.type === entity.uid.type && p.id === entity.uid.id
-      )
+  const children = entitiesData.filter((e) =>
+    e.parents?.some((p) => p.type === entity.uid.type && p.id === entity.uid.id)
   );
 
-  const childrenHtml =
-    children.length > 0
-      ? `<div class="section">
-                <div class="section-title">👶 Children</div>
-                ${children
-        .map(
-          (c) =>
-            `<div class="list-item">${stripNamespace(c.uid.type)}::${c.uid.id}</div>`
-        )
-        .join("")}
-               </div>`
-      : "";
+  const childrenHtml = children.length > 0
+    ? `<div class="section">
+        <div class="section-title">👶 Children</div>
+        ${children.map((c) => `<div class="list-item">${stripNamespace(c.uid.type)}::${c.uid.id}</div>`).join("")}
+      </div>`
+    : "";
 
   return `
-            <div class="entity-card">
-                <div class="entity-header">
-                    <div class="entity-id">${entity.uid.id}</div>
-                    <div class="entity-type-badge">${stripNamespace(entity.uid.type)}</div>
-                </div>
-                ${parentsHtml}
-                ${childrenHtml}
-                ${attrsHtml}
-            </div>
-        `;
+    <div class="entity-card">
+      <div class="entity-header">
+        <div class="entity-id">${entity.uid.id}</div>
+        <div class="entity-type-badge">${stripNamespace(entity.uid.type)}</div>
+      </div>
+      ${parentsHtml}
+      ${childrenHtml}
+      ${attrsHtml}
+    </div>
+  `;
 }
 
 function renderHierarchy() {
@@ -534,39 +495,29 @@ function renderHierarchyNode(entity, visited = new Set()) {
 
   visited.add(key);
 
-  const children = entitiesData.filter(
-    (e) =>
-      e.parents &&
-      e.parents.some(
-        (p) => p.type === entity.uid.type && p.id === entity.uid.id
-      )
+  const children = entitiesData.filter((e) =>
+    e.parents?.some((p) => p.type === entity.uid.type && p.id === entity.uid.id)
   );
 
-  const hasChildren = children.length > 0;
   const nodeId = `node-${key.replace(/[^a-zA-Z0-9]/g, "-")}`;
 
-  const childrenHtml =
-    children.length > 0
-      ? `<div class="tree-children" id="${nodeId}-children">
-                ${children
-        .map((c) => renderHierarchyNode(c, new Set(visited)))
-        .join("")}
-               </div>`
-      : "";
+  const childrenHtml = children.length > 0
+    ? `<div class="tree-children" id="${nodeId}-children">
+        ${children.map((c) => renderHierarchyNode(c, new Set(visited))).join("")}
+      </div>`
+    : "";
 
   return `
-            <div class="tree-node" onclick="toggleTreeNode(event, '${nodeId}')">
-                <div class="tree-node-header">
-                    ${hasChildren
+    <div class="tree-node" onclick="toggleTreeNode(event, '${nodeId}')">
+      <div class="tree-node-header">
+        ${children.length > 0
       ? '<span class="tree-toggle">▼</span>'
-      : '<span class="tree-toggle" style="visibility: hidden;">▼</span>'
-    }
-                    <span><strong>${stripNamespace(entity.uid.type)}::</strong>${entity.uid.id
-    }</span>
-                </div>
-                ${childrenHtml}
-            </div>
-        `;
+      : '<span class="tree-toggle" style="visibility: hidden;">▼</span>'}
+        <span><strong>${stripNamespace(entity.uid.type)}::</strong>${entity.uid.id}</span>
+      </div>
+      ${childrenHtml}
+    </div>
+  `;
 }
 
 function toggleTreeNode(event, nodeId) {
@@ -583,65 +534,51 @@ function toggleTreeNode(event, nodeId) {
 function renderSchema() {
   if (!schemaData) {
     document.getElementById("content-area").innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">📜</div>
-                    <h2>No Schema Loaded</h2>
-                    <p>Upload a Cedar schema file to view its structure.</p>
-                </div>
-            `;
+      <div class="empty-state">
+        <div class="empty-state-icon">📜</div>
+        <h2>No Schema Loaded</h2>
+        <p>Upload a Cedar schema file to view its structure.</p>
+      </div>
+    `;
     return;
   }
 
   const entitiesHtml = schemaData.entities
-    .map(
-      (e) => `
-            <div class="list-item">
-                <strong>${stripNamespace(e.name)}</strong>
-                ${e.possibleParents.length > 0
-          ? ` → can be in [${e.possibleParents.map(p => stripNamespace(p)).join(", ")}]`
-          : ""
-        }
-            </div>
-        `
-    )
-    .join("");
+    .map((e) => `
+      <div class="list-item">
+        <strong>${stripNamespace(e.name)}</strong>
+        ${e.possibleParents.length > 0
+        ? ` → can be in [${e.possibleParents.map(p => stripNamespace(p)).join(", ")}]`
+        : ""}
+      </div>
+    `).join("");
 
   const actionsHtml = schemaData.actions
-    .map(
-      (action) => `
-            <div class="action-item">
-                <div class="action-name">🎬 ${stripNamespace(action.name)}</div>
-                <div class="action-detail"><strong>Principals:</strong> ${action.principals.map(p => stripNamespace(p)).join(
-        ", "
-      )}</div>
-                <div class="action-detail"><strong>Resources:</strong> ${action.resources.map(r => stripNamespace(r)).join(
-        ", "
-      )}</div>
-                ${action.context
-          ? `<div class="action-detail"><strong>Context:</strong><div class="context-detail">${action.context}</div></div>`
-          : ""
-        }
-            </div>
-        `
-    )
-    .join("");
+    .map((action) => `
+      <div class="action-item">
+        <div class="action-name">🎬 ${stripNamespace(action.name)}</div>
+        <div class="action-detail"><strong>Principals:</strong> ${action.principals.map(p => stripNamespace(p)).join(", ")}</div>
+        <div class="action-detail"><strong>Resources:</strong> ${action.resources.map(r => stripNamespace(r)).join(", ")}</div>
+        ${action.context ? `<div class="action-detail"><strong>Context:</strong><div class="context-detail">${action.context}</div></div>` : ""}
+      </div>
+    `).join("");
 
   document.getElementById("content-area").innerHTML = `
-            <h2 style="margin-bottom: 20px;">📜 Schema Structure</h2>
-            
-            <div class="schema-section">
-                <div class="schema-title">Entity Types (${schemaData.entities.length})</div>
-                ${entitiesHtml}
-            </div>
+    <h2 style="margin-bottom: 20px;">📜 Schema Structure</h2>
+    
+    <div class="schema-section">
+      <div class="schema-title">Entity Types (${schemaData.entities.length})</div>
+      ${entitiesHtml}
+    </div>
 
-            <div class="schema-section">
-                <div class="schema-title">Actions (${schemaData.actions.length})</div>
-                ${actionsHtml}
-            </div>
+    <div class="schema-section">
+      <div class="schema-title">Actions (${schemaData.actions.length})</div>
+      ${actionsHtml}
+    </div>
 
-            <div class="schema-section">
-                <div class="schema-title">Raw Schema</div>
-                <pre>${schemaData.raw}</pre>
-            </div>
-        `;
+    <div class="schema-section">
+      <div class="schema-title">Raw Schema</div>
+      <pre>${schemaData.raw}</pre>
+    </div>
+  `;
 }
