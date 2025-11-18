@@ -638,6 +638,50 @@ pre {
   white-space: pre-wrap;
 }
 
+.context-json {
+  background: #f8f9fa;
+  padding: 12px;
+  border-radius: 6px;
+  margin-top: 8px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 0.88em;
+  line-height: 1.6;
+  color: #2d3748;
+  border: 1px solid #e2e8f0;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.context-toggle-btn {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85em;
+  font-weight: 500;
+  transition: background 0.3s;
+  margin-top: 4px;
+}
+
+.context-toggle-btn:hover {
+  background: #5568d3;
+}
+
+.context-container {
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+  overflow: hidden;
+  max-height: 1000px;
+  opacity: 1;
+}
+
+.context-container.context-hidden {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+}
+
 /* Toggle Switch */
 .toggle-switch {
   position: relative;

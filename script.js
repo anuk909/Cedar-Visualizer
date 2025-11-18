@@ -359,7 +359,7 @@ function stripNamespace(fullName) {
 
   const parts = fullName.split('::');
   if (parts.length > 1) {
-    return parts[parts.length - 1];
+    return parts.slice(1, parts.length).join('::');
   }
   return fullName;
 }
@@ -679,6 +679,53 @@ function toggleTreeNode(event, nodeId) {
   }
 }
 
+function formatContextForDisplay(contextString) {
+  if (!contextString) return '';
+
+  try {
+    const contextObj = JSON.parse(contextString);
+
+    // Check if context is empty or has no meaningful content
+    if (contextObj.type === "Record" && (!contextObj.attributes || Object.keys(contextObj.attributes).length === 0)) {
+      return ''; // Don't show empty context
+    }
+
+    // Return formatted JSON with syntax highlighting
+    return `<pre class="context-json">${JSON.stringify(contextObj, null, 2)}</pre>`;
+  } catch (e) {
+    // If it's not valid JSON, return as-is
+    return `<pre class="context-json">${contextString}</pre>`;
+  }
+}
+
+function hasNonEmptyContext(contextString) {
+  if (!contextString) return false;
+
+  try {
+    const contextObj = JSON.parse(contextString);
+
+    // Check if context is empty or has no meaningful content
+    if (contextObj.type === "Record" && (!contextObj.attributes || Object.keys(contextObj.attributes).length === 0)) {
+      return false;
+    }
+
+    return true;
+  } catch (e) {
+    return !!contextString;
+  }
+}
+
+function toggleContext(actionIndex) {
+  const contextEl = document.getElementById(`context-${actionIndex}`);
+  const toggleBtn = document.getElementById(`context-toggle-${actionIndex}`);
+
+  if (contextEl && toggleBtn) {
+    contextEl.classList.toggle('context-hidden');
+    const isHidden = contextEl.classList.contains('context-hidden');
+    toggleBtn.textContent = isHidden ? '▶ Show Context' : '▼ Hide Context';
+  }
+}
+
 function renderSchema() {
   if (!schemaData) {
     document.getElementById("content-area").innerHTML = `
@@ -702,12 +749,20 @@ function renderSchema() {
     `).join("");
 
   const actionsHtml = schemaData.actions
-    .map((action) => `
+    .map((action, index) => `
       <div class="action-item">
         <div class="action-name">🎬 ${stripNamespace(action.name)}</div>
         <div class="action-detail"><strong>Principals:</strong> ${action.principals.map(p => stripNamespace(p)).join(", ")}</div>
         <div class="action-detail"><strong>Resources:</strong> ${action.resources.map(r => stripNamespace(r)).join(", ")}</div>
-        ${action.context ? `<div class="action-detail"><strong>Context:</strong><div class="context-detail">${action.context}</div></div>` : ""}
+        ${hasNonEmptyContext(action.context) ? `
+          <div class="action-detail">
+            <button class="context-toggle-btn" id="context-toggle-${index}" onclick="toggleContext(${index})">▶ Show Context</button>
+            <div id="context-${index}" class="context-container context-hidden">
+              ${formatContextForDisplay(action.context)}
+            </div>
+          </div>
+        ` : ""}
+        ${action.memberOf && action.memberOf.length > 0 ? `<div class="action-detail"><strong>Member Of:</strong> ${action.memberOf.map(m => stripNamespace(m.id)).join(", ")}</div>` : ""}
       </div>
     `).join("");
 
