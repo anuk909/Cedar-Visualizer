@@ -349,7 +349,7 @@ function clearData() {
 function toggleSampleData() {
   const content = document.getElementById('sample-content');
   const arrow = document.getElementById('sample-arrow');
-  
+
   content.classList.toggle('open');
   arrow.classList.toggle('open');
 }

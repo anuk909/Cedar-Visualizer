@@ -1,4 +1,4 @@
-# Cedar Policy Visualizer
+# Cedar Entity & Schema Visualizer
 
 A simple web-based tool for visualizing Cedar schemas and entities.
 
@@ -7,7 +7,7 @@ Recommended for PC/desktop viewing only.
 
 ## Features
 
-- Load and visualize Cedar schemas
+- Load and visualize Cedar schemas and entities
 - Display entity hierarchies
 - View schema definitions
 - Interactive entity exploration
